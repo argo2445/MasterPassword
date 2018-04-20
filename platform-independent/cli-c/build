@@ -46,7 +46,7 @@ cflags=( -O3 $CFLAGS )
 ldflags=( $LDFLAGS )
 
 # Version.
-if { mpw_version=$(git describe --match '*-cli*' --long --dirty --broken) || mpw_version=$(<VERSION); } 2>/dev/null; then
+if { mpw_version=$(git describe --match '*-cli*' --long --dirty) || mpw_version=$(<VERSION); } 2>/dev/null; then
     cflags+=( -D"MP_VERSION=$mpw_version" )
 fi
 echo 2>&1 "Current mpw source version ${mpw_version:-<unknown>}..."
@@ -150,13 +150,15 @@ cc() {
 
 ### DEPENDENCIES
 use() {
-    local option=$1 requisite=$2 lib=$3
+    local option=$1 requisite=$2 lib=$3; shift 3
     local enabled=${!option}
 
     if (( enabled )); then
         if haslib "$lib"; then
+            for lib in "$lib" "$@"; do
+                haslib "$lib" && ldflags+=( -l"$lib" )
+            done
             echo >&2 "INFO:     Enabled $option (lib$lib)."
-            ldflags+=( -l"$lib" )
             return 0
 
         elif [[ $requisite == required ]]; then
@@ -184,7 +186,7 @@ use_mpw_sodium() {
 }
 use_mpw_color() {
     local requisite=$1
-    use mpw_color "$requisite" curses && cflags+=( -D"MPW_COLOR=1" ) ||:
+    use mpw_color "$requisite" curses tinfo && cflags+=( -D"MPW_COLOR=1" ) ||:
 }
 use_mpw_json() {
     local requisite=$1

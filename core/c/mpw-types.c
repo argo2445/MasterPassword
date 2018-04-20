@@ -22,6 +22,9 @@
 #include "mpw-types.h"
 #include "mpw-util.h"
 
+const size_t MPMasterKeySize = 64;
+const size_t MPSiteKeySize = 256 / 8; // Size of HMAC-SHA-256
+
 const MPResultType mpw_typeWithName(const char *typeName) {
 
     // Find what password type is represented by the type letter.
@@ -81,7 +84,7 @@ const MPResultType mpw_typeWithName(const char *typeName) {
     if (strncmp( mpw_nameForType( MPResultTypeDeriveKey ), stdTypeName, strlen( stdTypeName ) ) == 0)
         return MPResultTypeDeriveKey;
 
-    dbg( "Not a generated type name: %s\n", stdTypeName );
+    dbg( "Not a generated type name: %s", stdTypeName );
     return (MPResultType)ERR;
 }
 
@@ -111,7 +114,7 @@ const char *mpw_nameForType(MPResultType resultType) {
         case MPResultTypeDeriveKey:
             return "key";
         default: {
-            dbg( "Unknown password type: %d\n", resultType );
+            dbg( "Unknown password type: %d", resultType );
             return NULL;
         }
     }
@@ -120,7 +123,7 @@ const char *mpw_nameForType(MPResultType resultType) {
 const char **mpw_templatesForType(MPResultType type, size_t *count) {
 
     if (!(type & MPResultTypeClassTemplate)) {
-        dbg( "Not a generated type: %d\n", type );
+        dbg( "Not a generated type: %d", type );
         return NULL;
     }
 
@@ -156,7 +159,7 @@ const char **mpw_templatesForType(MPResultType type, size_t *count) {
             return mpw_alloc_array( count, const char *,
                     "cvcc cvc cvccvcv cvc", "cvc cvccvcvcv cvcv", "cv cvccv cvc cvcvccv" );
         default: {
-            dbg( "Unknown generated type: %d\n", type );
+            dbg( "Unknown generated type: %d", type );
             return NULL;
         }
     }
@@ -188,7 +191,7 @@ const MPKeyPurpose mpw_purposeWithName(const char *purposeName) {
     if (strncmp( mpw_nameForPurpose( MPKeyPurposeRecovery ), stdPurposeName, strlen( stdPurposeName ) ) == 0)
         return MPKeyPurposeRecovery;
 
-    dbg( "Not a purpose name: %s\n", stdPurposeName );
+    dbg( "Not a purpose name: %s", stdPurposeName );
     return (MPKeyPurpose)ERR;
 }
 
@@ -202,7 +205,7 @@ const char *mpw_nameForPurpose(MPKeyPurpose purpose) {
         case MPKeyPurposeRecovery:
             return "recovery";
         default: {
-            dbg( "Unknown purpose: %d\n", purpose );
+            dbg( "Unknown purpose: %d", purpose );
             return NULL;
         }
     }
@@ -218,7 +221,7 @@ const char *mpw_scopeForPurpose(MPKeyPurpose purpose) {
         case MPKeyPurposeRecovery:
             return "com.lyndir.masterpassword.answer";
         default: {
-            dbg( "Unknown purpose: %d\n", purpose );
+            dbg( "Unknown purpose: %d", purpose );
             return NULL;
         }
     }
@@ -248,7 +251,7 @@ const char *mpw_charactersInClass(char characterClass) {
         case ' ':
             return " ";
         default: {
-            dbg( "Unknown character class: %c\n", characterClass );
+            dbg( "Unknown character class: %c", characterClass );
             return NULL;
         }
     }
@@ -261,41 +264,4 @@ const char mpw_characterFromClass(char characterClass, uint8_t seedByte) {
         return '\0';
 
     return classCharacters[seedByte % strlen( classCharacters )];
-}
-
-MPIdenticon mpw_identicon(const char *fullName, const char *masterPassword) {
-
-    const char *leftArm[] = { "╔", "╚", "╰", "═" };
-    const char *rightArm[] = { "╗", "╝", "╯", "═" };
-    const char *body[] = { "█", "░", "▒", "▓", "☺", "☻" };
-    const char *accessory[] = {
-            "◈", "◎", "◐", "◑", "◒", "◓", "☀", "☁", "☂", "☃", "", "★", "☆", "☎", "☏", "⎈", "⌂", "☘", "☢", "☣",
-            "☕", "⌚", "⌛", "⏰", "⚡", "⛄", "⛅", "☔", "♔", "♕", "♖", "♗", "♘", "♙", "♚", "♛", "♜", "♝", "♞", "♟",
-            "♨", "♩", "♪", "♫", "⚐", "⚑", "⚔", "⚖", "⚙", "⚠", "⌘", "⏎", "✄", "✆", "✈", "✉", "✌"
-    };
-
-    const uint8_t *identiconSeed = NULL;
-    if (fullName && strlen( fullName ) && masterPassword && strlen( masterPassword ))
-        identiconSeed = mpw_hash_hmac_sha256(
-                (const uint8_t *)masterPassword, strlen( masterPassword ),
-                (const uint8_t *)fullName, strlen( fullName ) );
-    if (!identiconSeed)
-        return (MPIdenticon){
-                .leftArm = "",
-                .body = "",
-                .rightArm = "",
-                .accessory = "",
-                .color=0,
-        };
-
-    MPIdenticon identicon = {
-            .leftArm = leftArm[identiconSeed[0] % (sizeof( leftArm ) / sizeof( leftArm[0] ))],
-            .body = body[identiconSeed[1] % (sizeof( body ) / sizeof( body[0] ))],
-            .rightArm = rightArm[identiconSeed[2] % (sizeof( rightArm ) / sizeof( rightArm[0] ))],
-            .accessory = accessory[identiconSeed[3] % (sizeof( accessory ) / sizeof( accessory[0] ))],
-            .color = (uint8_t)(identiconSeed[4] % 7 + 1),
-    };
-    mpw_free( &identiconSeed, 32 );
-
-    return identicon;
 }

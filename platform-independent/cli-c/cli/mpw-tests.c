@@ -19,7 +19,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ftl(...) do { fprintf( stderr, __VA_ARGS__ ); exit(2); } while (0)
+#ifndef mpw_log_do
+#define mpw_log_do(level, format, ...) ({ \
+    fprintf( stderr, format "\n", ##__VA_ARGS__ ); \
+    if (level == ftl_level) \
+        abort(); \
+})
+#endif
 
 #include "mpw-algorithm.h"
 #include "mpw-util.h"
@@ -32,7 +38,7 @@ int main(int argc, char *const argv[]) {
 
     xmlNodePtr tests = xmlDocGetRootElement( xmlParseFile( "mpw_tests.xml" ) );
     if (!tests) {
-        ftl( "Couldn't find test case: mpw_tests.xml\n" );
+        ftl( "Couldn't find test case: mpw_tests.xml" );
         abort();
     }
 
@@ -60,7 +66,7 @@ int main(int argc, char *const argv[]) {
         do {
             fprintf( stdout, "test case %s... ", id );
             if (!xmlStrlen( result )) {
-                fprintf( stdout, "abstract.\n" );
+                fprintf( stdout, "abstract." );
                 continue;
             }
 
@@ -68,7 +74,7 @@ int main(int argc, char *const argv[]) {
             MPMasterKey masterKey = mpw_masterKey(
                     (char *)fullName, (char *)masterPassword, algorithm );
             if (!masterKey) {
-                ftl( "Couldn't derive master key.\n" );
+                ftl( "Couldn't derive master key." );
                 abort();
             }
 
@@ -85,7 +91,7 @@ int main(int argc, char *const argv[]) {
                     masterKey, (char *)siteName, siteCounter, keyPurpose, (char *)keyContext, resultType, NULL, algorithm );
             mpw_free( &masterKey, MPMasterKeySize );
             if (!testResult) {
-                ftl( "Couldn't derive site password.\n" );
+                ftl( "Couldn't derive site password." );
                 continue;
             }
 
